@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Cerberus — delegation demo</title>
+<style>
+  :root{
+    --ink:#1a1a2e; --paper:#fbfaf7; --muted:#6c6f80; --line:#e6e2d6;
+    --gold:#9a6a00; --goldbg:#fdf3d6; --goldln:#c9a227;
+    --blue:#2f5bb7; --bluebg:#eef4ff;
+    --green:#2e7d5b; --greenbg:#e9f6ef;
+    --red:#c0392b; --redbg:#fbe9e6;
+    --slate:#3b4a63;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Segoe UI",-apple-system,Helvetica,Arial,sans-serif; line-height:1.5;
+  }
+  .wrap{max-width:1120px; margin:0 auto; padding:28px 20px 64px}
+  header.top{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; border-bottom:2px solid var(--ink); padding-bottom:14px}
+  header.top h1{font-size:30px; margin:0; letter-spacing:.5px}
+  header.top .sub{font-style:italic; color:var(--gold); font-size:16px}
+  header.top .tag{margin-left:auto; font-size:12px; font-weight:700; color:var(--blue); letter-spacing:1px}
+  .lede{font-size:16px; margin:16px 0 26px}
+  .lede b{color:var(--ink)}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:20px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 18px 16px}
+  .card h2{font-size:13px; letter-spacing:1.4px; text-transform:uppercase; color:var(--slate); margin:0 0 12px}
+  .kv{font-size:14px; margin:6px 0; color:var(--muted)}
+  .kv b{color:var(--ink)}
+  .ceiling{background:var(--bluebg); border-color:#cfe0ff}
+  .envelope{background:var(--goldbg); border-color:var(--goldln)}
+  .pill{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; vertical-align:middle}
+  .pill.on{background:var(--greenbg); color:var(--green)}
+  .pill.off{background:var(--redbg); color:var(--red)}
+  .controls{display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 2px}
+  button{
+    font:inherit; font-weight:700; font-size:14px; cursor:pointer; border-radius:10px;
+    padding:11px 16px; border:1px solid transparent; transition:transform .05s ease, box-shadow .15s ease;
+  }
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:3px solid #94b4ff; outline-offset:2px}
+  .btn-primary{background:var(--ink); color:#fff}
+  .btn-ghost{background:#fff; color:var(--ink); border-color:var(--line)}
+  .btn-danger{background:var(--red); color:#fff}
+  .btn-toggle{background:#fff; border-color:var(--line); color:var(--slate)}
+  .btn-toggle[aria-pressed="true"]{background:var(--slate); color:#fff; border-color:var(--slate)}
+  .runbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:22px 0 10px}
+  .runbar .spacer{flex:1}
+  .state-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:14px; color:var(--muted)}
+  .gate{margin-top:22px}
+  .checks{list-style:none; margin:6px 0 0; padding:0}
+  .checks li{
+    display:flex; align-items:flex-start; gap:10px; padding:9px 12px; border:1px solid var(--line);
+    border-radius:10px; margin:8px 0; font-size:14px; background:#fff; opacity:.35; transition:opacity .2s ease, border-color .2s
+  }
+  .checks li.show{opacity:1}
+  .checks li .mark{font-weight:800; width:18px; text-align:center; flex:none}
+  .checks li.pass{border-color:#bfe3cf} .checks li.pass .mark{color:var(--green)}
+  .checks li.fail{border-color:#efc7c0; background:var(--redbg)} .checks li.fail .mark{color:var(--red)}
+  .checks li small{color:var(--muted); display:block; font-weight:400}
+  .verdict{margin-top:14px; font-size:20px; font-weight:800; min-height:28px; letter-spacing:.3px}
+  .verdict.pass{color:var(--green)} .verdict.deny{color:var(--red)}
+  .verdict .why{display:block; font-size:13px; font-weight:500; color:var(--muted); margin-top:3px}
+  .log{margin-top:26px}
+  .log h2{font-size:13px; letter-spacing:1.4px; text-transform:uppercase; color:var(--slate); margin:0 0 10px}
+  .receipt{
+    border:1px solid var(--line); border-left:4px solid var(--slate); border-radius:8px; padding:10px 13px; margin:8px 0;
+    font-size:13px; background:#fff; animation:slideIn .25s ease
+  }
+  .receipt.pass{border-left-color:var(--green)} .receipt.deny{border-left-color:var(--red)} .receipt.revoke{border-left-color:var(--gold)}
+  .receipt .r-top{display:flex; justify-content:space-between; gap:12px; font-weight:700}
+  .receipt .r-top .r-dec.pass{color:var(--green)} .receipt .r-top .r-dec.deny{color:var(--red)} .receipt .r-top .r-dec.revoke{color:var(--gold)}
+  .receipt code{font-family:Consolas,Menlo,monospace; font-size:12px; color:var(--slate)}
+  .receipt .r-meta{color:var(--muted); margin-top:4px; font-family:Consolas,Menlo,monospace; font-size:11.5px; word-break:break-all}
+  .empty{color:var(--muted); font-size:13px; font-style:italic}
+  @keyframes slideIn{from{opacity:0; transform:translateY(-4px)}to{opacity:1; transform:none}}
+  .foot{margin-top:34px; padding-top:14px; border-top:1px solid var(--line); color:var(--muted); font-size:12.5px}
+  .hint{font-size:12.5px; color:var(--muted); margin-top:6px}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>CERBERUS</h1>
+    <span class="sub">delegation, live</span>
+    <span class="tag">AI PASSPORT IDEATHON · AGENTS</span>
+  </header>
+
+  <p class="lede"><b>AI Passport already decides what an AI may know about you. Cerberus decides what it may do for you.</b>
+  The enterprise sets the ceiling and which privileges are agent-delegatable; the person delegates within it; the gate verifies every attempted action before it reaches production. Press <b>Run the agent</b>, watch it get denied while the rack is unsafe, let conditions change, and try <b>Revoke</b> at any time.</p>
+
+  <div class="grid">
+    <div class="card ceiling">
+      <h2>Enterprise entitlement · the ceiling</h2>
+      <div class="kv">Set by platform IAM, not the person.</div>
+      <div class="kv"><b>Maya may drain:</b> racks 1–8</div>
+      <div class="kv"><b>Maya may not:</b> reconfigure spines, touch prod DB</div>
+      <div class="kv"><b>Delegatable to agents:</b> rack.drain only <span class="pill off">spine ops human-only</span></div>
+      <div class="hint">A Pass can never exceed this, even if Maya writes more into her Passport.</div>
+    </div>
+    <div class="card envelope">
+      <h2>Maya’s delegation envelope</h2>
+      <div class="kv">Consent happens here, once, when the envelope is set.</div>
+      <div class="kv"><b>Agent may:</b> drain racks, during maintenance window</div>
+      <div class="kv"><b>Lease:</b> ≤ 30 min · single-use Pass per action</div>
+      <div class="hint">Inside this, Passes are issued automatically. No per-action clicks.</div>
+    </div>
+  </div>
+
+  <div class="runbar">
+    <button class="btn-primary" id="run">▶ Run the agent — “drain rack 4”</button>
+    <button class="btn-danger" id="revoke" disabled>■ Revoke delegation</button>
+    <button class="btn-ghost" id="reset">↺ Reset</button>
+    <div class="spacer"></div>
+    <div class="state-row">
+      <span>Rack 4 authoritative state:</span>
+      <button class="btn-toggle" id="stateToggle" aria-pressed="false">unsafe — 3 active flows</button>
+    </div>
+  </div>
+  <div class="hint" id="delegationState">Delegation: <span class="pill on">active</span></div>
+
+  <div class="card gate">
+    <h2>⛓ Portcullis gate — verifies the delegated Pass</h2>
+    <ul class="checks" id="checks">
+      <li data-k="issuer"><span class="mark">•</span><span><b>Issuer trusted &amp; owner mapped to IAM</b><small>Is this Passport issuer recognized, and is Maya a real identity?</small></span></li>
+      <li data-k="ceiling"><span class="mark">•</span><span><b>Scope ⊆ (delegation ∩ entitlement)</b><small>drain rack 4 must sit inside both Maya’s envelope and her IAM rights.</small></span></li>
+      <li data-k="policy"><span class="mark">•</span><span><b>Enterprise allows delegating this to an agent</b><small>A privilege Maya may run by hand is not automatically agent-delegatable.</small></span></li>
+      <li data-k="binding"><span class="mark">•</span><span><b>Bound to agent, gateway, plan hash; nonce single-spend</b><small>Binding stops repurposing; the atomic nonce stops replay and double-spend.</small></span></li>
+      <li data-k="state"><span class="mark">•</span><span><b>Authoritative state + live evidence</b><small>Scheduler says drain-safe AND sFlow shows zero active flows.</small></span></li>
+      <li data-k="revoked"><span class="mark">•</span><span><b>Nonce fresh, Pass not revoked</b><small>Checked at execution, never cached.</small></span></li>
+    </ul>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <div class="log">
+    <h2>Receipts — returned to the owner</h2>
+    <div id="log"><div class="empty">No actions yet. Run the agent to generate a receipt.</div></div>
+  </div>
+
+  <div class="foot">
+    Logical-path prototype: mock IAM, mock scheduler, mock orchestrator. No production systems are touched.
+    The gate fails closed and the nonce is atomically single-spent. The Pass carries opaque references, so corporate identity and topology stay enterprise-side;
+    the receipt keeps signed decision hashes (policy, plan, state assertion, evidence digest), never raw telemetry.
+  </div>
+</div>
+
+<script>
+(function(){
+  var revoked=false, safe=false, passCount=0, nonceCtr=1000;
+  var el=function(id){return document.getElementById(id)};
+  var checksEl=el('checks'), verdictEl=el('verdict'), logEl=el('log');
+
+  function rand(n){var s="0123456789abcdef",o="";for(var i=0;i<n;i++)o+=s[Math.floor(Math.random()*16)];return o;}
+  function hash(){return rand(4)+"…";}
+
+  function setDelegation(){
+    el('delegationState').innerHTML='Delegation: '+(revoked
+      ? '<span class="pill off">revoked</span>'
+      : '<span class="pill on">active</span>');
+    el('revoke').disabled = revoked;
+  }
+  function setState(){
+    var b=el('stateToggle');
+    b.setAttribute('aria-pressed', safe?'true':'false');
+    b.textContent = safe ? 'safe — 0 active flows' : 'unsafe — 3 active flows';
+  }
+
+  function resetChecks(){
+    verdictEl.className='verdict'; verdictEl.innerHTML='';
+    Array.prototype.forEach.call(checksEl.children,function(li){
+      li.className=''; li.querySelector('.mark').textContent='•';
+    });
+  }
+
+  // returns {ok, failKey, reason}
+  function evaluate(){
+    if(revoked) return {ok:false, failKey:'revoked', reason:'delegation was revoked by the owner'};
+    if(!safe)   return {ok:false, failKey:'state',   reason:'rack 4 is not drain-safe (scheduler unsafe, live flows present)'};
+    return {ok:true};
+  }
+
+  function reveal(order, verdict){
+    var keys=['issuer','ceiling','policy','binding','state','revoked'];
+    var i=0;
+    (function step(){
+      if(i>=keys.length){ finalize(verdict); return; }
+      var k=keys[i];
+      var li=checksEl.querySelector('[data-k="'+k+'"]');
+      li.classList.add('show');
+      var isFail = (!verdict.ok && verdict.failKey===k);
+      // a check only "passes" visually if we reach it and it's not the failing one;
+      // stop marking passes after the failing check
+      var reachedFail = (!verdict.ok && keys.indexOf(verdict.failKey) < i);
+      if(isFail){ li.classList.add('fail'); li.querySelector('.mark').textContent='✗'; }
+      else if(!reachedFail){ li.classList.add('pass'); li.querySelector('.mark').textContent='✓'; }
+      i++;
+      setTimeout(step, 260);
+      if(!verdict.ok && verdict.failKey===k){ /* keep going to show remaining greyed */ }
+    })();
+  }
+
+  function finalize(verdict){
+    var passId='pass_'+rand(6), nonce='n'+(nonceCtr++);
+    if(verdict.ok){
+      passCount++;
+      verdictEl.className='verdict pass';
+      verdictEl.innerHTML='PASS ✓ — rack 4 drained<span class="why">Pass '+passId+' authorized and spent. Orchestrator executed via the Portcullis identity.</span>';
+      addReceipt('pass','PASS · rack.drain rack:4', passId, nonce, 'scheduler=safe · sflow=0 flows');
+    } else {
+      verdictEl.className='verdict deny';
+      verdictEl.innerHTML='DENY ✗<span class="why">'+verdict.reason+'. Nothing reached a switch.</span>';
+      addReceipt('deny','DENY · rack.drain rack:4', passId, nonce,
+        verdict.failKey==='revoked' ? 'delegation=revoked' : 'scheduler=unsafe · sflow=3 flows');
+    }
+  }
+
+  function addReceipt(kind, title, passId, nonce, stateStr){
+    var empty=logEl.querySelector('.empty'); if(empty) empty.remove();
+    var now=new Date().toISOString().replace('T',' ').slice(0,19)+'Z';
+    var dec = kind==='revoke' ? 'REVOKE' : (kind==='pass'?'PASS':'DENY');
+    var div=document.createElement('div');
+    div.className='receipt '+kind;
+    div.innerHTML =
+      '<div class="r-top"><span>'+title+'</span><span class="r-dec '+kind+'">'+dec+'</span></div>'+
+      '<div class="r-meta">'+
+        'owner=user:maya · delegate=cerberus-agent-12 · '+ (kind==='revoke'?'':('pass='+passId+' · nonce='+nonce+' · ')) +
+        'plan='+hash()+' · policy='+hash()+' · state['+stateStr+'] · evidence='+hash()+' · '+now+
+      '</div>';
+    logEl.insertBefore(div, logEl.firstChild);
+  }
+
+  el('run').addEventListener('click', function(){
+    resetChecks();
+    reveal(null, evaluate());
+  });
+
+  el('revoke').addEventListener('click', function(){
+    revoked=true; setDelegation();
+    resetChecks();
+    addReceipt('revoke','REVOKE · delegation env_rack_maintenance', null, null, 'owner-initiated');
+    verdictEl.className='verdict deny';
+    verdictEl.innerHTML='Delegation revoked<span class="why">Any new run is denied at the gate. Leased operations cancel where the orchestrator supports it.</span>';
+  });
+
+  el('stateToggle').addEventListener('click', function(){ safe=!safe; setState(); });
+
+  el('reset').addEventListener('click', function(){
+    revoked=false; safe=false; passCount=0;
+    setDelegation(); setState(); resetChecks();
+    logEl.innerHTML='<div class="empty">No actions yet. Run the agent to generate a receipt.</div>';
+  });
+
+  setDelegation(); setState();
+})();
+</script>
+</body>
+</html>
